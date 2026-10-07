@@ -102,6 +102,16 @@ describe("vision", () => {
       "invalid-facing",
     );
   });
+
+  it("does not visually detect a concealed target", () => {
+    expect(evaluateVision({
+      ...BASE_VISION,
+      targetConcealed: true,
+    })).toMatchObject({
+      visible: false,
+      reason: "concealed",
+    });
+  });
 });
 
 describe("sound", () => {

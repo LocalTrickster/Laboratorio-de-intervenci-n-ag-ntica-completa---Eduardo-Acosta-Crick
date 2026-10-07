@@ -1,8 +1,15 @@
-# Plan de intervención — Upgrade 7
+# Plan de implementación — Upgrade 7
 
 ## Objetivo del plan
 
 Permitir que el jugador genere sonidos en puntos configurados y comprobar que el guardia sólo aprende la posición después de una audición válida.
+
+## Resultado de implementación
+
+Completado. Se configuraron tres distractores estáticos; E activa el más cercano dentro de 56 px y crea un `SoundEvent` temporal en su posición. No hay recarga ni límite de usos. Q sigue siendo el sonido emitido desde el jugador.
+
+Archivos: `src/application/simulation/labLevel.ts`, `src/application/simulation/soundDistractor.ts`, `src/game/scenes/GameScene.ts`.
+Pruebas: `tests/application/soundDistractor.test.ts`, `tests/model/grid.test.ts`, `tests/application/perceptionSimulation.test.ts` y pruebas de prioridad H4.
 
 ## Cambios propuestos
 

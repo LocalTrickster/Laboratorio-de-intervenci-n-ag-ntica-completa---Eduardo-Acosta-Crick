@@ -34,7 +34,9 @@ El cono dibujado refleja exactamente el rango y campo visual usados por percepci
 - Sensor y cono comparten los mismos parámetros y criterio de oclusión.
 - El estado se comunica mediante texto además del color.
 
-## Preguntas abiertas
+## Decisiones e implementación
 
-- Confirmar si se desea distinguir `outside-cone`, `out-of-range` y `occluded` con patrones/contornos diferentes además del texto.
-- Verificar contraste de la paleta sobre el fondo actual.
+- Estado: implementado; el cono usa el mismo rango y ángulo que el sensor y presenta el resultado de `VisionResult` con HUD textual y color.
+- Las causas visible, fuera de rango, fuera del cono, oclusión, orientación inválida y ocultamiento tienen señal visual diferenciada.
+- Rutas: `src/application/simulation/labLevel.ts`, `src/domain/perception/perception.ts`, `src/game/presentation/guardPresentation.ts`, `src/game/scenes/GameScene.ts`.
+- Pruebas: `tests/perception/perception.test.ts`, `tests/application/perceptionSimulation.test.ts` y `tests/presentation/guardPresentation.test.ts`.

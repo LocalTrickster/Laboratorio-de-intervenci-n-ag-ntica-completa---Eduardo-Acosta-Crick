@@ -45,6 +45,7 @@ export interface GuardSimulationInput {
   readonly algorithm: SearchAlgorithm;
   readonly searchDurationMs: number;
   readonly searchRadiusInCells: number;
+  readonly patrolPauseDurationMs: number;
   readonly visiblePosition: GridPoint | null;
   readonly heardPosition: GridPoint | null;
   readonly lastKnownPosition: Vector2 | null;
@@ -109,6 +110,7 @@ export function advanceGuardSimulation(
     timeMs: input.timeMs,
     searchDurationMs: input.searchDurationMs,
     searchRadiusInCells: input.searchRadiusInCells,
+    patrolPauseDurationMs: input.patrolPauseDurationMs,
     visiblePosition: input.visiblePosition,
     heardPosition: input.heardPosition,
     lastKnownPosition,
@@ -144,12 +146,16 @@ export function advanceGuardSimulation(
     }
   }
 
+  const pauseActive = decision.state.mode === "patrolling"
+    && decision.state.patrolPauseUntilMs !== null
+    && input.timeMs < decision.state.patrolPauseUntilMs;
   const movement = advanceAlongPath(
     state.position,
     route,
     nextWaypoint,
-    input.speed * input.deltaMs / 1000,
+    pauseActive ? 0 : input.speed * input.deltaMs / 1000,
   );
+  const lookDirection = pauseActive ? directionToNextWaypoint(state.position, route, nextWaypoint) : null;
   const transitions = decision.transitions.length > 0
     ? [...state.transitions, ...decision.transitions].slice(-MAX_RECORDED_TRANSITIONS)
     : state.transitions;
@@ -157,7 +163,7 @@ export function advanceGuardSimulation(
   return {
     behavior: decision.state,
     position: movement.position,
-    facing: movement.direction ?? state.facing,
+    facing: lookDirection ?? movement.direction ?? state.facing,
     route,
     nextWaypoint: movement.nextWaypoint,
     routeTarget,
@@ -185,9 +191,31 @@ function validateInput(input: GuardSimulationInput): void {
     || input.searchDurationMs <= 0
     || !Number.isInteger(input.searchRadiusInCells)
     || input.searchRadiusInCells < 1
+    || !Number.isFinite(input.patrolPauseDurationMs)
+    || input.patrolPauseDurationMs < 0
   ) {
     throw new Error("Guard simulation timing, movement, and search configuration must be valid.");
   }
+}
+
+function directionToNextWaypoint(
+  position: Vector2,
+  route: readonly Vector2[],
+  nextWaypoint: number,
+): Vector2 | null {
+  for (let index = nextWaypoint; index < route.length; index += 1) {
+    const target = route[index];
+    if (!target) {
+      continue;
+    }
+    const x = target.x - position.x;
+    const y = target.y - position.y;
+    const length = Math.hypot(x, y);
+    if (length > Number.EPSILON) {
+      return { x: x / length, y: y / length };
+    }
+  }
+  return null;
 }
 
 function samePoint(left: GridPoint | null, right: GridPoint | null): boolean {

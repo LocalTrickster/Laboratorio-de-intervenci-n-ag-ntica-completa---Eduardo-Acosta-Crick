@@ -1,13 +1,20 @@
 import Phaser from "phaser";
 import {
+  COVER_POINTS,
+  DISTRACTOR_INTERACTION_RANGE,
+  GUARD_FIELD_OF_VIEW,
   GUARD_START,
   GUARD_PATROL_POINTS,
+  GUARD_VISION_RANGE,
   GRID_HEIGHT,
   GRID_WIDTH,
   LAB_MAP,
+  PATROL_PAUSE_DURATION_MS,
   PLAYER_START,
+  SOUND_DISTRACTOR_POINTS,
   TILE_SIZE,
 } from "../../application/simulation/labLevel";
+import { activateNearestSoundDistractor } from "../../application/simulation/soundDistractor";
 import {
   advanceGuardSimulation,
   guardNavigationStatus,
@@ -20,15 +27,14 @@ import {
   withSoundEvent,
   type PerceptionSimulationState,
 } from "../../application/simulation/perceptionSimulation";
-import { cellCenter, isWalkable, worldToCell } from "../../domain/model/grid";
+import { cellCenter, cellKey, isWalkable, worldToCell } from "../../domain/model/grid";
 import type { SearchAlgorithm, SearchResult, SearchStatus } from "../../domain/navigation/search";
 import { timeSinceLastPerception } from "../../domain/perception/memory";
 import type { VisionReason, VisionResult } from "../../domain/perception/perception";
+import { GUARD_STATE_COLORS, VISION_COLORS } from "../presentation/guardPresentation";
 
 const PLAYER_SPEED = 190;
 const GUARD_SPEED = 115;
-const VISION_RANGE = 220;
-const FIELD_OF_VIEW = Math.PI / 2;
 const SOUND_RADIUS = 190;
 const SOUND_DURATION_MS = 800;
 const SEARCH_DURATION_MS = 6_000;
@@ -45,8 +51,8 @@ const VISION_LABELS: Readonly<Record<VisionReason, string>> = {
   "outside-cone": "FUERA DEL CONO",
   occluded: "OCLUIDO",
   "invalid-facing": "DIRECCION INVALIDA",
+  concealed: "OCULTO",
 };
-
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Rectangle;
   private playerBody!: Phaser.Physics.Arcade.Body;
@@ -59,14 +65,21 @@ export class GameScene extends Phaser.Scene {
   private reset!: Phaser.Input.Keyboard.Key;
   private toggleAlgorithm!: Phaser.Input.Keyboard.Key;
   private emitSound!: Phaser.Input.Keyboard.Key;
+  private hidePlayer!: Phaser.Input.Keyboard.Key;
+  private emitDistractor!: Phaser.Input.Keyboard.Key;
   private navigationGraphics!: Phaser.GameObjects.Graphics;
   private perceptionGraphics!: Phaser.GameObjects.Graphics;
   private targetMarker!: Phaser.GameObjects.Arc;
   private lastKnownMarker!: Phaser.GameObjects.Arc;
   private navigationHud!: Phaser.GameObjects.Text;
+  private guardTween: Phaser.Tweens.Tween | null = null;
   private navigationAlgorithm: SearchAlgorithm = "astar";
   private guardSimulation!: GuardSimulationState;
   private perceptionState: PerceptionSimulationState = initialPerceptionState();
+  private concealed = false;
+  private interactionMessage = "";
+  private interactionMessageUntilMs = 0;
+  private lastPresentedTransition = "";
 
   public constructor() {
     super("GameScene");
@@ -75,6 +88,11 @@ export class GameScene extends Phaser.Scene {
   public create(): void {
     this.navigationAlgorithm = "astar";
     this.perceptionState = initialPerceptionState();
+    this.concealed = false;
+    this.interactionMessage = "";
+    this.interactionMessageUntilMs = 0;
+    this.lastPresentedTransition = "";
+    this.guardTween = null;
     this.cameras.main.setBackgroundColor("#10161c");
     this.drawGrid();
 
@@ -112,9 +130,12 @@ export class GameScene extends Phaser.Scene {
     this.reset = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.toggleAlgorithm = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.emitSound = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.hidePlayer = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H);
+    this.emitDistractor = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     this.perceptionGraphics = this.add.graphics().setDepth(1);
     this.navigationGraphics = this.add.graphics().setDepth(2);
+    this.drawCoverAndDistractors();
     const guardPosition = cellCenter(GUARD_START, TILE_SIZE);
     this.guard = this.add
       .circle(guardPosition.x, guardPosition.y, 11, 0x6b8afd)
@@ -181,6 +202,13 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    if (Phaser.Input.Keyboard.JustDown(this.hidePlayer)) {
+      this.toggleConcealment(time);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.emitDistractor)) {
+      this.activateNearestDistractor(time);
+    }
+
     const horizontal = Number(this.cursors.right.isDown || this.moveRight.isDown)
       - Number(this.cursors.left.isDown || this.moveLeft.isDown);
     const vertical = Number(this.cursors.down.isDown || this.moveDown.isDown)
@@ -189,14 +217,22 @@ export class GameScene extends Phaser.Scene {
 
     if (velocity.lengthSq() > 0) {
       velocity.normalize().scale(PLAYER_SPEED);
+      if (this.concealed) {
+        this.concealed = false;
+        this.player.setFillStyle(0xe5b454);
+        this.interactionMessage = "MOVIMIENTO: OCULTAMIENTO CANCELADO";
+        this.interactionMessageUntilMs = time + 1_500;
+      }
     }
 
     this.playerBody.setVelocity(velocity.x, velocity.y);
-    const perceptionFrame = this.updatePerception(time);
-    this.updateGuardMovement(time, delta, perceptionFrame);
-    this.drawPerception(perceptionFrame.vision);
+    const decisionFrame = this.updatePerception(time);
+    this.updateGuardMovement(time, delta, decisionFrame);
+    const displayFrame = this.updatePerception(time);
+    this.applyGuardTransitionFeedback();
+    this.drawPerception(displayFrame.vision);
     this.renderGuardNavigation();
-    this.updateTelemetry(time, perceptionFrame.vision, perceptionFrame.soundHeard);
+    this.updateTelemetry(time, displayFrame.vision, displayFrame.soundHeard);
   }
 
   private drawGrid(): void {
@@ -209,6 +245,94 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y <= GRID_HEIGHT; y += 1) {
       graphics.lineBetween(0, y * TILE_SIZE, GRID_WIDTH * TILE_SIZE, y * TILE_SIZE);
     }
+  }
+
+  private drawCoverAndDistractors(): void {
+    for (const point of COVER_POINTS) {
+      const center = cellCenter(point, TILE_SIZE);
+      this.add.rectangle(center.x, center.y, TILE_SIZE - 8, TILE_SIZE - 8, 0x36594a, 0.8)
+        .setStrokeStyle(2, 0x73c991)
+        .setDepth(3);
+      this.add.text(center.x, center.y, "H", {
+        color: "#d7ffe6",
+        fontFamily: "monospace",
+        fontSize: "12px",
+      }).setOrigin(0.5).setDepth(3);
+    }
+
+    for (const point of SOUND_DISTRACTOR_POINTS) {
+      const center = cellCenter(point, TILE_SIZE);
+      this.add.circle(center.x, center.y, 9, 0xe5b454, 0.9)
+        .setStrokeStyle(2, 0xffe1a0)
+        .setDepth(3);
+      this.add.text(center.x, center.y, "!", {
+        color: "#10161c",
+        fontFamily: "monospace",
+        fontSize: "12px",
+        fontStyle: "bold",
+      }).setOrigin(0.5).setDepth(4);
+    }
+
+    this.add.text(16, 34, "H: ocultarse  E: distractor  Q: sonido propio", {
+      color: "#d9e4ea",
+      fontFamily: "monospace",
+      fontSize: "12px",
+    }).setDepth(10);
+  }
+
+  private toggleConcealment(time: number): void {
+    const cell = worldToCell({ x: this.player.x, y: this.player.y }, TILE_SIZE);
+    if (!COVER_POINTS.some((cover) => cellKey(cover) === cellKey(cell))) {
+      this.concealed = false;
+      this.interactionMessage = "SIN COBERTURA";
+    } else {
+      this.concealed = !this.concealed;
+      this.interactionMessage = this.concealed ? "OCULTO EN COBERTURA" : "EXPUESTO";
+    }
+    this.interactionMessageUntilMs = time + 1_500;
+    this.player.setFillStyle(this.concealed ? 0x526b61 : 0xe5b454);
+  }
+
+  private activateNearestDistractor(time: number): void {
+    const activation = activateNearestSoundDistractor(
+      { x: this.player.x, y: this.player.y },
+      SOUND_DISTRACTOR_POINTS.map((point) => cellCenter(point, TILE_SIZE)),
+      time,
+      DISTRACTOR_INTERACTION_RANGE,
+      SOUND_RADIUS,
+      SOUND_DURATION_MS,
+    );
+    if (!activation.event || !activation.result.position) {
+      this.interactionMessage = "SIN DISTRACTOR CERCANO";
+      this.interactionMessageUntilMs = time + 1_500;
+      return;
+    }
+
+    this.perceptionState = withSoundEvent(this.perceptionState, activation.event);
+    const cell = worldToCell(activation.result.position, TILE_SIZE);
+    this.interactionMessage = `DISTRACTOR ${cellKey(cell)} ACTIVADO`;
+    this.interactionMessageUntilMs = time + 1_500;
+  }
+
+  private applyGuardTransitionFeedback(): void {
+    const transition = this.guardSimulation.transitions.at(-1);
+    if (!transition) {
+      return;
+    }
+    const key = `${transition.atMs}:${transition.event}:${transition.to}:${this.guardSimulation.transitions.length}`;
+    if (key === this.lastPresentedTransition) {
+      return;
+    }
+    this.lastPresentedTransition = key;
+    this.guardTween?.stop();
+    this.guard.setFillStyle(GUARD_STATE_COLORS[transition.to]).setScale(1);
+    this.guardTween = this.tweens.add({
+      targets: this.guard,
+      scale: 1.2,
+      duration: 140,
+      yoyo: true,
+      ease: "Sine.easeInOut",
+    });
   }
 
   private renderGuardNavigation(): void {
@@ -276,6 +400,7 @@ export class GameScene extends Phaser.Scene {
       algorithm: this.navigationAlgorithm,
       searchDurationMs: SEARCH_DURATION_MS,
       searchRadiusInCells: SEARCH_RADIUS_IN_CELLS,
+      patrolPauseDurationMs: PATROL_PAUSE_DURATION_MS,
       visiblePosition: frame.vision.visible
         ? worldToCell({ x: this.player.x, y: this.player.y }, TILE_SIZE)
         : null,
@@ -297,9 +422,10 @@ export class GameScene extends Phaser.Scene {
       observer,
       facing: this.guardSimulation.facing,
       target,
-      visionRange: VISION_RANGE,
-      fieldOfViewRadians: FIELD_OF_VIEW,
+      visionRange: GUARD_VISION_RANGE,
+      fieldOfViewRadians: GUARD_FIELD_OF_VIEW,
       timeMs: time,
+      targetConcealed: this.concealed,
     });
     this.perceptionState = frame.state;
     return frame;
@@ -311,19 +437,21 @@ export class GameScene extends Phaser.Scene {
       this.guardSimulation.facing.y,
       this.guardSimulation.facing.x,
     );
-    const halfFieldOfView = FIELD_OF_VIEW / 2;
-    this.perceptionGraphics.fillStyle(vision.visible ? 0x73c991 : 0x6b8afd, 0.16);
+    const halfFieldOfView = GUARD_FIELD_OF_VIEW / 2;
+    this.perceptionGraphics.fillStyle(VISION_COLORS[vision.reason], 0.16);
     this.perceptionGraphics.beginPath();
     this.perceptionGraphics.moveTo(this.guard.x, this.guard.y);
     this.perceptionGraphics.arc(
       this.guard.x,
       this.guard.y,
-      VISION_RANGE,
+      GUARD_VISION_RANGE,
       facingAngle - halfFieldOfView,
       facingAngle + halfFieldOfView,
     );
     this.perceptionGraphics.closePath();
     this.perceptionGraphics.fillPath();
+    this.perceptionGraphics.lineStyle(1, VISION_COLORS[vision.reason], 0.65);
+    this.perceptionGraphics.strokePath();
 
     if (this.perceptionState.soundEvent) {
       this.perceptionGraphics.lineStyle(2, 0xe5b454, 0.8);
@@ -361,15 +489,21 @@ export class GameScene extends Phaser.Scene {
     const routeSummary = route
       ? `${route.algorithm.toUpperCase()} / ${navigation} costo ${route.totalCost ?? "-"} nodos ${route.expandedNodes}`
       : `RUTA / ${navigation}`;
+    const interaction = time <= this.interactionMessageUntilMs
+      ? this.interactionMessage
+      : this.concealed
+        ? "OCULTO EN COBERTURA"
+        : "H: ocultarse | E: distractor | Q: sonido";
 
     this.navigationHud.setText([
       `estado ${this.guardSimulation.behavior.mode.toUpperCase()}`,
       routeSummary,
       ...transitionText.map((transition) => `evento ${transition}`),
-      ...(lastTransition ? [`causa ${lastTransition.reason.slice(0, 72)}`] : []),
+      ...(lastTransition ? [`causa ${lastTransition.reason.slice(0, 48)}`] : []),
       `vision ${VISION_LABELS[vision.reason]}`,
       `sonido ${sound}`,
       memory,
+      interaction,
     ]);
   }
 }

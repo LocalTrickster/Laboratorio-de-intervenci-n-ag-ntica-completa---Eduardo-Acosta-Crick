@@ -11,6 +11,7 @@ const BASE_INPUT = {
   timeMs: 100,
   searchDurationMs: 2_000,
   searchRadiusInCells: 2,
+  patrolPauseDurationMs: 700,
   visiblePosition: null,
   heardPosition: null,
   lastKnownPosition: null,
@@ -26,11 +27,57 @@ describe("guard behavior", () => {
     expect(decision.state.mode).toBe("patrolling");
     expect(decision.state.patrolIndex).toBe(1);
     expect(decision.state.target).toEqual(PATROLS[1]);
+    expect(decision.state.patrolPauseUntilMs).toBe(800);
     expect(decision.transitions[0]).toMatchObject({
       from: "patrolling",
       to: "patrolling",
       event: "patrol-waypoint-reached",
     });
+    });
+
+    it("holds the patrol pause until its deadline and then resumes with telemetry", () => {
+      const state = createGuardBehaviorState(PATROLS, MAP);
+      const paused = decideGuardBehavior(state, { ...BASE_INPUT, arrived: true }).state;
+      const duringPause = decideGuardBehavior(paused, {
+        ...BASE_INPUT,
+        timeMs: 799,
+      });
+      expect(duringPause.state).toBe(paused);
+      expect(duringPause.transitions).toHaveLength(0);
+
+      const resumed = decideGuardBehavior(paused, {
+        ...BASE_INPUT,
+        timeMs: 800,
+      });
+      expect(resumed.state.patrolPauseUntilMs).toBeNull();
+      expect(resumed.transitions[0]?.event).toBe("patrol-pause-completed");
+    });
+
+    it("cancels the patrol pause when valid vision interrupts patrol", () => {
+      const paused = decideGuardBehavior(
+        createGuardBehaviorState(PATROLS, MAP),
+        { ...BASE_INPUT, arrived: true },
+      ).state;
+      const pursuing = decideGuardBehavior(paused, {
+        ...BASE_INPUT,
+        timeMs: 150,
+        visiblePosition: { x: 4, y: 4 },
+      });
+      expect(pursuing.state.mode).toBe("pursuing");
+      expect(pursuing.state.patrolPauseUntilMs).toBeNull();
+  });
+
+  it("cancels the patrol pause when an audible sound interrupts patrol", () => {
+      const paused = decideGuardBehavior(
+        createGuardBehaviorState(PATROLS, MAP),
+        { ...BASE_INPUT, arrived: true },
+      ).state;
+      const investigating = decideGuardBehavior(paused, {
+        ...BASE_INPUT,
+        heardPosition: { x: 4, y: 4 },
+      });
+      expect(investigating.state.mode).toBe("investigating");
+      expect(investigating.state.patrolPauseUntilMs).toBeNull();
   });
 
   it("gives valid vision priority over a simultaneous sound", () => {

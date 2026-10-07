@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { LAB_MAP, PLAYER_START, TILE_SIZE } from "../../src/application/simulation/labLevel";
+import {
+  COVER_POINTS,
+  LAB_MAP,
+  PLAYER_START,
+  SOUND_DISTRACTOR_POINTS,
+  TILE_SIZE,
+} from "../../src/application/simulation/labLevel";
 import {
   cellCenter,
   createGridMap,
@@ -10,6 +16,12 @@ import {
 describe("grid map", () => {
   it("keeps the player start cell walkable", () => {
     expect(isWalkable(LAB_MAP, PLAYER_START)).toBe(true);
+  });
+
+  it("keeps cover and sound distractors on walkable cells", () => {
+    expect([...COVER_POINTS, ...SOUND_DISTRACTOR_POINTS].every((point) =>
+      isWalkable(LAB_MAP, point),
+    )).toBe(true);
   });
 
   it("blocks the level boundary and positions outside the map", () => {

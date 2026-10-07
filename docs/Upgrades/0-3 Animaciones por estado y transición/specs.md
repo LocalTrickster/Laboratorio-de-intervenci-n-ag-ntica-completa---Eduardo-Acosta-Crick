@@ -34,7 +34,9 @@ La presentación distingue Patrullar, Investigar, Perseguir, Buscar y Regresar, 
 - La orientación y locomoción siguen la salida del seguidor de rutas, salvo una mirada explícita de patrulla aprobada por el Upgrade 1.
 - No se usan assets externos.
 
-## Preguntas abiertas
+## Decisiones e implementación
 
-- Elegir vocabulario visual (tinte, escala, pulso o combinación) que no confunda estado con resultado de visión.
-- Definir duración de cada respuesta y si Buscar debe distinguirse de Investigar por forma o sólo por color/texto.
+- Estado: implementado; cada estado tiene tinte tipado y cada transición nueva produce un pulso breve, interrumpible, de 140 ms.
+- La escena consume el último evento una sola vez; la animación no cambia decisión, ruta ni velocidad. Phaser limpia los tweens al reiniciar la escena.
+- Rutas: `src/game/presentation/guardPresentation.ts`, `src/game/scenes/GameScene.ts`.
+- Pruebas: `tests/presentation/guardPresentation.test.ts`; transición observable probada en las pruebas de comportamiento y simulación H4.

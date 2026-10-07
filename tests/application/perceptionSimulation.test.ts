@@ -49,4 +49,33 @@ describe("perception simulation", () => {
     expect(frame.state.soundEvent).toBeNull();
     expect(frame.soundHeard).toBe(false);
   });
+
+  it("does not update memory from vision while the target is concealed", () => {
+    const frame = updatePerceptionSimulation(initialPerceptionState(), {
+      ...INPUT,
+      targetConcealed: true,
+    });
+
+    expect(frame.vision).toMatchObject({ visible: false, reason: "concealed" });
+    expect(frame.state.memory.lastKnownPosition).toBeNull();
+    expect(frame.state.memory.source).toBeNull();
+  });
+
+  it("still hears sound while the target is concealed", () => {
+    const state = withSoundEvent(initialPerceptionState(), {
+      position: { x: 10, y: 15 },
+      radius: 20,
+      emittedAtMs: 100,
+      durationMs: 100,
+    });
+    const frame = updatePerceptionSimulation(state, {
+      ...INPUT,
+      targetConcealed: true,
+    });
+
+    expect(frame.soundHeard).toBe(true);
+    expect(frame.vision.reason).toBe("concealed");
+    expect(frame.state.memory.source).toBe("sound");
+    expect(frame.state.memory.lastKnownPosition).toEqual({ x: 10, y: 15 });
+  });
 });

@@ -1,8 +1,15 @@
-# Plan de intervención — Upgrade 6
+# Plan de implementación — Upgrade 6
 
 ## Objetivo del plan
 
 Añadir una acción de sigilo que aproveche cobertura estática existente sin mezclar sensores con decisiones ni alterar el grafo de navegación.
+
+## Resultado de implementación
+
+Completado. Se añadieron cuatro celdas transitables como cobertura y la tecla H para ocultarse/exponerse; el movimiento cancela el ocultamiento. Percepción visual reporta `concealed`, sin alterar sonido ni escribir memoria visual.
+
+Archivos: `src/application/simulation/labLevel.ts`, `src/domain/perception/perception.ts`, `src/application/simulation/perceptionSimulation.ts`, `src/game/scenes/GameScene.ts`.
+Pruebas: `tests/perception/perception.test.ts`, `tests/application/perceptionSimulation.test.ts`, `tests/model/grid.test.ts`.
 
 ## Cambios propuestos
 

@@ -1,8 +1,15 @@
-# Plan de intervención — Upgrade 1
+# Plan de implementación — Upgrade 1
 
 ## Objetivo del plan
 
 Añadir una pausa y orientación anticipatoria sólo a la patrulla, preservando las reglas H4 y la separación entre decisión, locomoción y presentación.
+
+## Resultado de implementación
+
+Completado. Se incorporó el temporizador de pausa al estado de patrulla; la aplicación detiene el avance, conserva la ruta al siguiente waypoint y orienta al guardia al primer segmento no recorrido. La pausa se cancela al recibir un estímulo válido.
+
+Archivos modificados: `src/domain/behavior/guardBehavior.ts`, `src/application/simulation/guardSimulation.ts`, `src/game/scenes/GameScene.ts`.
+Pruebas: `tests/behavior/guardBehavior.test.ts` y `tests/application/guardSimulation.test.ts`.
 
 ## Cambios propuestos
 

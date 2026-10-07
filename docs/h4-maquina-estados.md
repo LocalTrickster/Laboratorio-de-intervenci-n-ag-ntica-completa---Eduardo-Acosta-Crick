@@ -27,6 +27,7 @@ El dominio no depende de Phaser, DOM ni APIs del navegador. Sensores y memoria p
 | Puntos de patrulla | (27,17), (27,2), (2,2), (2,17) |
 | Radio de búsqueda local | 2 celdas, distancia Manhattan |
 | Duración máxima de búsqueda | 6000 ms |
+| Pausa de patrulla | 700 ms en cada punto alcanzado |
 
 ## Reglas de decisión
 
@@ -43,6 +44,8 @@ El dominio no depende de Phaser, DOM ni APIs del navegador. Sensores y memoria p
 - WASD/flechas: mover al jugador.
 - Q: emitir sonido desde el jugador.
 - Espacio: alternar BFS/A* para comparar la ruta actual.
+- H: ocultarse o exponerse en cobertura.
+- E: activar el distractor sonoro cercano.
 - R: reiniciar el escenario.
 
 ## Pruebas
@@ -51,4 +54,4 @@ El dominio no depende de Phaser, DOM ni APIs del navegador. Sensores y memoria p
 - `tests/application/guardSimulation.test.ts`: integración ruta/locomoción, conservación de rutas y fallo sin falsa llegada.
 - `tests/perception/` y `tests/navigation/`: contratos previos de sensores, memoria, búsqueda y seguidor de caminos.
 
-Los upgrades opcionales de pausas de patrulla, cono reactivo, animación, cobertura y distractores son trabajo separado; sus documentos en `docs/Upgrades/0-1` a `0-5` son planes, no capacidades implementadas.
+Los upgrades 1, 2, 3, 6 y 7 del catálogo están implementados. Cada especificación, plan y evidencia está en su carpeta `docs/Upgrades/0-*` descriptiva. La visualización del campo comparte los parámetros del sensor; la cobertura sólo afecta visión; los distractores emiten eventos sonoros temporales y no revelan su ubicación antes de ser oídos. Los pasos de prueba manual se documentan aparte de la validación automatizada.

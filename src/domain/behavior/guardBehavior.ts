@@ -18,6 +18,7 @@ export interface GuardBehaviorState {
   readonly searchCandidateIndex: number;
   readonly searchDeadlineMs: number | null;
   readonly attemptedPatrolIndices: readonly number[];
+  readonly patrolPauseUntilMs: number | null;
 }
 
 export interface GuardBehaviorInput {
@@ -26,6 +27,7 @@ export interface GuardBehaviorInput {
   readonly timeMs: number;
   readonly searchDurationMs: number;
   readonly searchRadiusInCells: number;
+  readonly patrolPauseDurationMs: number;
   readonly visiblePosition: GridPoint | null;
   readonly heardPosition: GridPoint | null;
   readonly lastKnownPosition: GridPoint | null;
@@ -60,6 +62,7 @@ export function createGuardBehaviorState(
     searchCandidateIndex: -1,
     searchDeadlineMs: null,
     attemptedPatrolIndices: [],
+    patrolPauseUntilMs: null,
   };
 }
 
@@ -82,6 +85,7 @@ export function decideGuardBehavior(
           searchCandidateIndex: -1,
           searchDeadlineMs: null,
           attemptedPatrolIndices: [],
+          patrolPauseUntilMs: null,
         },
         input,
         state.mode === "pursuing" ? "visual-target-updated" : "visual-contact",
@@ -105,6 +109,7 @@ export function decideGuardBehavior(
         searchCandidateIndex: -1,
         searchDeadlineMs: null,
         attemptedPatrolIndices: [],
+        patrolPauseUntilMs: null,
       },
       input,
       "visual-contact-lost",
@@ -147,6 +152,7 @@ export function decideGuardBehavior(
           searchCandidates: [],
           searchCandidateIndex: -1,
           searchDeadlineMs: null,
+          patrolPauseUntilMs: null,
           attemptedPatrolIndices: [],
         },
         input,
@@ -154,6 +160,19 @@ export function decideGuardBehavior(
         "Se investiga únicamente la posición de un sonido validado.",
       );
     }
+  }
+
+  if (state.mode === "patrolling" && state.patrolPauseUntilMs !== null) {
+    if (input.timeMs < state.patrolPauseUntilMs) {
+      return { state, transitions: [] };
+    }
+    return changeState(
+      state,
+      { ...state, patrolPauseUntilMs: null },
+      input,
+      "patrol-pause-completed",
+      "Terminó la pausa de patrulla y el guardia continúa hacia el siguiente punto.",
+    );
   }
 
   if (input.routeFailed && state.target) {
@@ -191,7 +210,12 @@ export function decideGuardBehavior(
         const index = (state.patrolIndex + 1) % input.patrolPoints.length;
         return changeState(
           state,
-          { ...state, patrolIndex: index, target: input.patrolPoints[index] ?? null },
+          {
+            ...state,
+            patrolIndex: index,
+            target: input.patrolPoints[index] ?? null,
+            patrolPauseUntilMs: input.timeMs + input.patrolPauseDurationMs,
+          },
           input,
           "patrol-waypoint-reached",
           "Se alcanzó el punto y se seleccionó el siguiente del ciclo.",
@@ -257,6 +281,7 @@ export function decideGuardBehavior(
               patrolIndex: index,
               target: input.patrolPoints[index] ?? null,
               attemptedPatrolIndices: [],
+              patrolPauseUntilMs: null,
             },
             input,
             "patrol-point-reached",
@@ -289,6 +314,7 @@ function beginReturn(
     searchCandidateIndex: -1,
     searchDeadlineMs: null,
     attemptedPatrolIndices: [...new Set([...state.attemptedPatrolIndices, ...attempted])],
+    patrolPauseUntilMs: null,
   };
   return selectReturnPoint(state, returning, input, event, reason);
 }
@@ -360,7 +386,13 @@ function changeState(
 }
 
 function assertInput(input: GuardBehaviorInput): void {
-  if (!Number.isFinite(input.timeMs) || !Number.isFinite(input.searchDurationMs) || input.searchDurationMs <= 0) {
+  if (
+    !Number.isFinite(input.timeMs)
+    || !Number.isFinite(input.searchDurationMs)
+    || input.searchDurationMs <= 0
+    || !Number.isFinite(input.patrolPauseDurationMs)
+    || input.patrolPauseDurationMs < 0
+  ) {
     throw new Error("Guard behavior time and search duration must be finite and valid.");
   }
   if (input.patrolPoints.length === 0) {

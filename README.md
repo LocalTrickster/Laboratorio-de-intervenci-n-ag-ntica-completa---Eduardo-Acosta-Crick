@@ -13,7 +13,7 @@ Proyecto canónico de PIAPC 2026 para aplicar desarrollo agéntico e inteligenci
 
 ## Estado
 
-H0 a H4 implementados: escenario base, navegación BFS/A*, percepción con memoria y conducta autónoma del guardia. Los upgrades opcionales del catálogo están en planificación.
+H0 a H4 implementados: escenario base, navegación BFS/A*, percepción con memoria y conducta autónoma del guardia. También están implementados cinco upgrades del catálogo: patrulla con pausas y mirada, cono visual reactivo, feedback animado por estado, cobertura y distractores sonoros.
 
 ## Ejecución
 
@@ -35,8 +35,10 @@ En la escena:
 - WASD o flechas: mover al jugador.
 - Espacio: alternar BFS y A* para las rutas automáticas del guardia.
 - Q: emitir un sonido desde el jugador.
+- H: ocultarse o exponerse en una celda de cobertura.
+- E: activar el distractor sonoro más cercano dentro del alcance.
 - R: reiniciar el escenario.
-- El guardia patrulla automáticamente; visión válida inicia persecución, sonido oído inicia investigación y perder visión inicia una búsqueda limitada antes del retorno.
+- El guardia patrulla con pausas; visión válida inicia persecución, sonido oído inicia investigación y perder visión inicia una búsqueda limitada antes del retorno.
 
 ## Propósito
 
@@ -66,11 +68,12 @@ El proyecto no busca producir un videojuego comercial. Es un entorno de experime
 - [Evidencia de pruebas](docs/plantillas/evidencia-pruebas.md)
 - [H3: percepción y movimiento](docs/h3-percepcion-movimiento.md)
 - [H4: máquina de estados del guardia](docs/h4-maquina-estados.md)
-- [Upgrade 1: patrulla con pausas](docs/Upgrades/0-1/Especificaciones.md)
-- [Upgrade 2: cono de visión reactivo](docs/Upgrades/0-2/Especificaciones.md)
-- [Upgrade 3: animaciones por estado](docs/Upgrades/0-3/Especificaciones.md)
-- [Upgrade 6: cobertura y ruptura de visión](docs/Upgrades/0-4/Especificaciones.md)
-- [Upgrade 7: distractores sonoros](docs/Upgrades/0-5/Especificaciones.md)
+- [Upgrade 1: patrulla con pausas y mirada direccional](docs/Upgrades/0-1%20Patrulla%20con%20pausas%20y%20mirada%20direccional/specs.md)
+- [Upgrade 2: cono de visión visible y reactivo](docs/Upgrades/0-2%20Cono%20de%20visi%C3%B3n%20visible%20y%20reactivo/specs.md)
+- [Upgrade 3: animaciones por estado y transición](docs/Upgrades/0-3%20Animaciones%20por%20estado%20y%20transici%C3%B3n/specs.md)
+- [Upgrade 6: cobertura y ruptura de línea de visión](docs/Upgrades/0-4%20Cobertura%20y%20ruptura%20de%20l%C3%ADnea%20de%20visi%C3%B3n/specs.md)
+- [Upgrade 7: distractores sonoros interactivos](docs/Upgrades/0-5%20Distractores%20sonoros%20interactivos/specs.md)
+- [Entrega preparada para la plataforma](docs/entrega.md)
 - [Intervención H3](docs/evidencias/h3-intervencion.md)
 - [Validación H3](docs/evidencias/h3-validacion.md)
 

@@ -1,7 +1,13 @@
 import { isWalkable, worldToCell, type GridMap } from "../model/grid";
 import { assertFiniteVector, distanceBetween, normalized, type Vector2 } from "../model/vector";
 
-export type VisionReason = "visible" | "out-of-range" | "outside-cone" | "occluded" | "invalid-facing";
+export type VisionReason =
+  | "visible"
+  | "out-of-range"
+  | "outside-cone"
+  | "occluded"
+  | "invalid-facing"
+  | "concealed";
 
 export interface VisionQuery {
   readonly map: GridMap;
@@ -11,6 +17,7 @@ export interface VisionQuery {
   readonly target: Vector2;
   readonly range: number;
   readonly fieldOfViewRadians: number;
+  readonly targetConcealed?: boolean;
 }
 
 export interface VisionResult {
@@ -49,6 +56,9 @@ export function evaluateVision(query: VisionQuery): VisionResult {
   }
 
   const distance = distanceBetween(query.observer, query.target);
+  if (query.targetConcealed) {
+    return { visible: false, reason: "concealed", distance };
+  }
   if (distance > query.range) {
     return { visible: false, reason: "out-of-range", distance };
   }

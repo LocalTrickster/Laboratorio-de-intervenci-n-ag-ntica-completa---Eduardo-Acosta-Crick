@@ -1,8 +1,15 @@
-# Plan de intervención — Upgrade 2
+# Plan de implementación — Upgrade 2
 
 ## Objetivo del plan
 
 Hacer que el campo visual sea legible y fiel al sensor, sin duplicar reglas de percepción ni cambiar el contrato de la FSM.
+
+## Resultado de implementación
+
+Completado. El sensor y el render comparten rango y campo angular configurados en `labLevel.ts`; la escena presenta la causa de percepción con color y texto. La cobertura se integra como resultado explícito del sensor y no cambia el contrato de persecución.
+
+Archivos: `src/application/simulation/labLevel.ts`, `src/domain/perception/perception.ts`, `src/game/presentation/guardPresentation.ts`, `src/game/scenes/GameScene.ts`.
+Pruebas: percepción geométrica, razón de ocultamiento y mapeo exhaustivo de resultados visuales.
 
 ## Cambios propuestos
 

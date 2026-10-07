@@ -35,7 +35,9 @@ El jugador puede activar un distractor sonoro configurado en el escenario. El ev
 - La posición de memoria corresponde al origen del sonido percibido, no a la posición del jugador.
 - Cada activación, audición y expiración relevante es observable en telemetría.
 
-## Preguntas abiertas
+## Decisiones e implementación
 
-- Definir cantidad/ubicación de distractores, distancia de interacción, reutilización y si el jugador cuenta con cargas limitadas. Propuesta de primer corte: dispositivos estáticos interactuables con una recarga temporal común.
-- Elegir tecla de interacción y feedback accesible; evitar conflicto con controles de cobertura.
+- Estado: implementado; tres puntos estáticos, interacción E dentro de 56 px, sin recarga ni límite de usos. Evento temporal: radio 190 px y duración 800 ms.
+- El helper de aplicación emite `SoundEvent` desde el dispositivo más cercano; el guardia aprende la posición sólo al oírlo. Q sigue generando sonido en la posición del jugador.
+- Rutas: `src/application/simulation/labLevel.ts`, `src/application/simulation/soundDistractor.ts`, `src/game/scenes/GameScene.ts`.
+- Pruebas: `tests/application/soundDistractor.test.ts`, `tests/model/grid.test.ts`, `tests/application/perceptionSimulation.test.ts` y pruebas H4 de prioridad.

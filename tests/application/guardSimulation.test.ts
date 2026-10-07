@@ -24,6 +24,7 @@ const INPUT = {
   algorithm: "astar" as const,
   searchDurationMs: 1_000,
   searchRadiusInCells: 2,
+  patrolPauseDurationMs: 700,
   visiblePosition: null,
   heardPosition: null,
   lastKnownPosition: null,
@@ -71,6 +72,38 @@ describe("guard simulation", () => {
     const second = advanceGuardSimulation(first, { ...INPUT, timeMs: 116, deltaMs: 16 });
 
     expect(second.route).toBe(first.route);
+  });
+
+  it("pauses at a patrol point without moving and faces the next route segment", () => {
+    const initial = initialGuardSimulation(MAP, 10, { x: 1, y: 1 }, PATROLS);
+    const arrivedAtStart = advanceGuardSimulation(initial, {
+      ...INPUT,
+      timeMs: 100,
+    });
+    const paused = advanceGuardSimulation(arrivedAtStart, {
+      ...INPUT,
+      timeMs: 200,
+      deltaMs: 100,
+    });
+
+    expect(paused.behavior.patrolPauseUntilMs).toBe(900);
+    expect(paused.position).toEqual(initial.position);
+    expect(paused.facing).toEqual({ x: 1, y: 0 });
+
+    const stillPaused = advanceGuardSimulation(paused, {
+      ...INPUT,
+      timeMs: 899,
+      deltaMs: 100,
+    });
+    expect(stillPaused.position).toEqual(paused.position);
+
+    const resumed = advanceGuardSimulation(stillPaused, {
+      ...INPUT,
+      timeMs: 900,
+      deltaMs: 100,
+    });
+    expect(resumed.position).not.toEqual(paused.position);
+    expect(resumed.transitions.at(-1)?.event).toBe("patrol-pause-completed");
   });
 
   it("changes from a valid visual chase to search using only remembered position", () => {

@@ -1,8 +1,15 @@
-# Plan de intervención — Upgrade 3
+# Plan de implementación — Upgrade 3
 
 ## Objetivo del plan
 
 Traducir el estado y los eventos observables del dominio a presentación breve, sin que Phaser se convierta en fuente de decisiones o modifique navegación.
+
+## Resultado de implementación
+
+Completado. El guardia tiene colores distintos para los cinco estados y aplica un pulso de 140 ms al recibir una transición nueva. El tween anterior se detiene antes de reproducir otro; los colores y la animación sólo presentan datos de estado/telemetría.
+
+Archivos: `src/game/presentation/guardPresentation.ts`, `src/game/scenes/GameScene.ts`.
+Pruebas: `tests/presentation/guardPresentation.test.ts` y pruebas H4 de producción de transiciones.
 
 ## Cambios propuestos
 

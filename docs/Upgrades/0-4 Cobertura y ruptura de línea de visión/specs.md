@@ -35,7 +35,9 @@ En celdas de cobertura configuradas, el jugador puede ocultarse y dejar de ser u
 - Visión válida conserva prioridad sobre sonido; estar oculto no invalida un sonido independiente.
 - Ocultamiento no depende de color/render para ser aplicado por la regla.
 
-## Preguntas abiertas
+## Decisiones e implementación
 
-- Definir cantidad y coordenadas de coberturas y si ocultarse es automático o requiere tecla. Propuesta: interacción explícita en celdas marcadas.
-- Definir si existe animación/postura de ocultamiento; se recomienda posponerla al Upgrade 3.
+- Estado: implementado; cuatro celdas configuradas y ocultamiento/exposición explícitos con H. Moverse cancela el ocultamiento.
+- La percepción devuelve `concealed` no visible; no actualiza memoria visual y no silencia sonidos. La memoria permanece sin cambios ante una ocultación aislada.
+- Rutas: `src/application/simulation/labLevel.ts`, `src/domain/perception/perception.ts`, `src/application/simulation/perceptionSimulation.ts`, `src/game/scenes/GameScene.ts`.
+- Pruebas: `tests/perception/perception.test.ts`, `tests/application/perceptionSimulation.test.ts`, `tests/model/grid.test.ts`.

@@ -11,6 +11,21 @@ export const GUARD_PATROL_POINTS: readonly GridPoint[] = [
   { x: 2, y: 2 },
   { x: 2, y: 17 },
 ];
+export const COVER_POINTS: readonly GridPoint[] = [
+  { x: 2, y: 5 },
+  { x: 2, y: 13 },
+  { x: 27, y: 7 },
+  { x: 27, y: 13 },
+];
+export const SOUND_DISTRACTOR_POINTS: readonly GridPoint[] = [
+  { x: 6, y: 2 },
+  { x: 23, y: 5 },
+  { x: 14, y: 13 },
+];
+export const DISTRACTOR_INTERACTION_RANGE = 56;
+export const GUARD_VISION_RANGE = 220;
+export const GUARD_FIELD_OF_VIEW = Math.PI / 2;
+export const PATROL_PAUSE_DURATION_MS = 700;
 
 interface BlockedRectangle {
   readonly x: number;

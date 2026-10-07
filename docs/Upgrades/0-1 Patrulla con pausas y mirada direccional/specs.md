@@ -34,7 +34,9 @@ Al llegar a un waypoint de patrulla, el guardia se detiene durante una pausa con
 - La llegada y la reanudación generan telemetría observable.
 - Visión conserva prioridad sobre sonido durante la pausa.
 
-## Preguntas abiertas
+## Decisiones e implementación
 
-- Confirmar duración de pausa y si la mirada debe seguir el próximo waypoint o recorrer un patrón de direcciones. Propuesta inicial: 700 ms mirando al siguiente tramo.
-- Confirmar si el mismo intervalo aplica a todos los puntos de patrulla.
+- Estado: implementado; pausa configurable de 700 ms por waypoint, con orientación al primer segmento no recorrido de la siguiente ruta.
+- La pausa conserva la ruta seleccionada, detiene la locomoción y se cancela al recibir visión o sonido válido.
+- Rutas: `src/domain/behavior/guardBehavior.ts`, `src/application/simulation/guardSimulation.ts`, `src/game/scenes/GameScene.ts`.
+- Pruebas: `tests/behavior/guardBehavior.test.ts` y `tests/application/guardSimulation.test.ts`.
