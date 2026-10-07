@@ -15,7 +15,7 @@ version: 3
 | H1. Repositorio preparado para agentes | Completado |
 | H2. Navegación | Completado |
 | H3. Percepción y movimiento | Completado |
-| H4. Máquina de estados | Pendiente |
+| H4. Máquina de estados | Completado |
 | H5. Comparación | Pendiente |
 | H6. Integración final | Pendiente |
 
@@ -51,13 +51,14 @@ version: 3
 - Seguimiento de caminos.
 - Pruebas de geometría y memoria.
 
-## H4. Máquina de estados
+## H4. Máquina de estados — completado
 
-- Patrullar, Investigar, Perseguir, Buscar y Regresar.
-- Guardas e invariantes.
-- Prioridades explícitas.
-- Registro de transiciones.
-- Pruebas de secuencias.
+- Estados Patrullar, Investigar, Perseguir, Buscar y Regresar en `src/domain/behavior/guardBehavior.ts`.
+- Patrulla cíclica con puntos transitables; búsqueda determinista de radio Manhattan 2 y duración de 6 segundos, iniciada al llegar a la última posición conocida.
+- Visión válida prioritaria sobre sonido; memoria actualizada únicamente por observaciones validadas.
+- Rutas conservadas mientras no cambie el objetivo; fallos conducen a retorno explícito y se prueban los puntos restantes.
+- Telemetría estructurada con tiempo, estados anterior/nuevo, evento, motivo y destino; el HUD presenta transiciones recientes.
+- Pruebas de decisiones, prioridades, temporizadores, navegación y recuperación en `tests/behavior/` y `tests/application/`.
 
 ### H4.1. Patrullar
 
